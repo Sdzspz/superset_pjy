@@ -21,7 +21,14 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 from . import Extension
 from ..treeprocessors import Treeprocessor
+from ..util import isBlockLevel
 import re
+
+try:
+    Scanner = re.Scanner
+except AttributeError:  # pragma: no cover
+    # must be on Python 2.4
+    from sre import Scanner
 
 
 def _handle_double_quote(s, t):
@@ -46,7 +53,7 @@ def _handle_word(s, t):
     return t, t
 
 
-_scanner = re.Scanner([
+_scanner = Scanner([
     (r'[^ =]+=".*?"', _handle_double_quote),
     (r"[^ =]+='.*?'", _handle_single_quote),
     (r'[^ =]+=[^ =]+', _handle_key_value),
@@ -78,7 +85,7 @@ class AttrListTreeprocessor(Treeprocessor):
 
     def run(self, doc):
         for elem in doc.iter():
-            if self.md.is_block_level(elem.tag):
+            if isBlockLevel(elem.tag):
                 # Block level: check for attrs on last line of text
                 RE = self.BLOCK_RE
                 if isheader(elem) or elem.tag == 'dt':
@@ -161,9 +168,11 @@ class AttrListTreeprocessor(Treeprocessor):
 
 
 class AttrListExtension(Extension):
-    def extendMarkdown(self, md):
-        md.treeprocessors.register(AttrListTreeprocessor(md), 'attr_list', 8)
+    def extendMarkdown(self, md, md_globals):
+        md.treeprocessors.add(
+            'attr_list', AttrListTreeprocessor(md), '>prettify'
+        )
 
 
-def makeExtension(**kwargs):  # pragma: no cover
-    return AttrListExtension(**kwargs)
+def makeExtension(*args, **kwargs):
+    return AttrListExtension(*args, **kwargs)

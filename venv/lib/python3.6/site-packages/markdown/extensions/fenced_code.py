@@ -25,11 +25,13 @@ import re
 
 class FencedCodeExtension(Extension):
 
-    def extendMarkdown(self, md):
+    def extendMarkdown(self, md, md_globals):
         """ Add FencedBlockPreprocessor to the Markdown instance. """
         md.registerExtension(self)
 
-        md.preprocessors.register(FencedBlockPreprocessor(md), 'fenced_code_block', 25)
+        md.preprocessors.add('fenced_code_block',
+                             FencedBlockPreprocessor(md),
+                             ">normalize_whitespace")
 
 
 class FencedBlockPreprocessor(Preprocessor):
@@ -55,7 +57,7 @@ class FencedBlockPreprocessor(Preprocessor):
 
         # Check for code hilite extension
         if not self.checked_for_codehilite:
-            for ext in self.md.registeredExtensions:
+            for ext in self.markdown.registeredExtensions:
                 if isinstance(ext, CodeHiliteExtension):
                     self.codehilite_conf = ext.config
                     break
@@ -90,7 +92,7 @@ class FencedBlockPreprocessor(Preprocessor):
                     code = self.CODE_WRAP % (lang,
                                              self._escape(m.group('code')))
 
-                placeholder = self.md.htmlStash.store(code)
+                placeholder = self.markdown.htmlStash.store(code, safe=True)
                 text = '%s\n%s\n%s' % (text[:m.start()],
                                        placeholder,
                                        text[m.end():])
@@ -107,5 +109,5 @@ class FencedBlockPreprocessor(Preprocessor):
         return txt
 
 
-def makeExtension(**kwargs):  # pragma: no cover
-    return FencedCodeExtension(**kwargs)
+def makeExtension(*args, **kwargs):
+    return FencedCodeExtension(*args, **kwargs)
